@@ -1,0 +1,20 @@
+@inherits RazorSliceHttpResult<DateTime>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Hello from Razor Slices!</title>
+</head>
+
+<body>
+    <p>
+        Hello from Razor Slices! The time is @Model
+    </p>
+    <form method="post" action="/upload" enctype="multipart/form-data">
+        <input type="file" name="file" />
+        <button type="submit">Upload</button>
+    </form>
+</body>
+
+</html>
