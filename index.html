@@ -1,13 +1,128 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/table.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
+    <title>Spreads</title>
   </head>
+
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
+    <header id="header">
+      <input
+        id="csv"
+        type="file"
+        accept=".csv"
+        onchange="handleFileSelection(event);"
+      />
+    </header>
+    <p>Total: <span id="total"></span></p>
+    <pre id="results"></pre>
   </body>
+
+  <script type="module">
+    import { parse, unparse } from "https://cdn.skypack.dev/papaparse";
+
+    window.handleFileSelection = handleFileSelection;
+
+    function handleFileSelection(event) {
+      parse(event.target.files[0], {
+        header: true,
+        complete: handleParsingResult,
+      });
+    }
+
+    function handleParsingResult(results) {
+      console.log(results);
+      filter(results.meta.fields);
+      download(results.data);
+      render(results.meta.fields, results.data);
+
+      const filterHandler = (event) =>
+        handleFilterUpdate(event, results.meta.fields, results.data);
+
+      ["change", "keyup"].forEach((event) => {
+        document
+          .getElementById("filter")
+          .addEventListener(event, filterHandler);
+      });
+    }
+
+    function handleFilterUpdate(event, headers, data) {
+      const key = document.getElementById("filter-key").value;
+      const op = document.getElementById("filter-op").value;
+      const val = document.getElementById("filter-val").value;
+
+      console.log({ key, op, val });
+
+      const rows = data.filter((row) => {
+        switch (op) {
+          case "=":
+            return row[key] === val;
+          case "!=":
+            console.log(row[key], val);
+            return row[key] !== val;
+        }
+      });
+
+      download(rows);
+      render(headers, rows);
+    }
+
+    function filter(headers) {
+      document.getElementById("filter")?.remove();
+
+      const columns = `
+        <select id="filter-key">
+          <option></option>
+          ${headers.map((key) => `<option>${key}</option>`)}
+        </select>`;
+
+      const operators = `
+        <select id="filter-op">
+          ${["=", "!="].map((o) => `<option>${o}</option>`)}
+        </select>`;
+
+      const input = `<input id="filter-val" type="text" />`;
+
+      const filter = `
+          <form id="filter">
+            ${columns}
+            ${operators}
+            ${input}
+          </form>`;
+
+      document.getElementById("header").insertAdjacentHTML("beforeend", filter);
+    }
+
+    function download(data) {
+      document.getElementById("download")?.remove();
+
+      const csv = unparse(data);
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+
+      const atag = `<a id="download" href="${url}" download="data.csv">Download</a>`;
+
+      document.getElementById("header").insertAdjacentHTML("beforeend", atag);
+    }
+
+    function render(headers, data) {
+      const total = data
+        .map((row) => parseFloat(row["Amount"]))
+        .reduce((a, b) => a + b, 0);
+      document.getElementById("total").innerText = total.toFixed(2);
+
+      document.getElementById("results").innerHTML =
+        headers.join(",") +
+        "\r\n" +
+        data
+          .map((row) =>
+            Object.keys(row)
+              .map((key) => row[key])
+              .join(",")
+          )
+          .join("\r\n");
+    }
+  </script>
 </html>
